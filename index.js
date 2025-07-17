@@ -45,6 +45,7 @@ app.use('/register',Register);
 app.use('/college',require('./routes/college'))
 app.use('/july',require('./routes/julyattendence'))
 app.use("/volunteerform", require("./routes/volunteerform"));
+app.use("/servicecoordinator", require("./routes/ServiceCoordinatro"));
 // const sendReminder = async (event, type) => {
 //   console.log(`🔔 Sending ${type} reminder for: ${event.venue} at ${event.cronDate}`);
 //   const users= await Volunteer.find({});
