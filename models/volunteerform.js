@@ -10,7 +10,29 @@ const volunteerSchema = new mongoose.Schema({
   profession: { type: String, enum: ['Student', 'Working', 'Job Trails', 'Business', 'Others'] },
   collegeOrCompany: { type: String },
   locality: { type: String },
-  referredBy: { type: String, enum: ['Sitanatha Dasa', 'Rama Dasa', 'Gauranga Dasa', 'mani teja prabhu', 'Other'] },
+  referredBy: { type: String, enum: [
+  'Sitanatha Dasa',
+  'Rama Dasa',
+  'Gauranga Dasa',
+  'mani teja prabhu',
+  'Not associated',
+  'Niskinchana Bhakta Dasa',
+  'Yaduraja Dasa',
+  'Vaikunteswara Dasa',
+  'Ambarisha Dasa',
+  'Sruthisagar Dasa',
+  'Shyam Mashav Dasa',
+  'Jitaamitra Dasa',
+  'Keshav Kripa Dasa',
+  'Gopeswara Dasa',
+  'Adhokshaja Dasa',
+  'Ranveer Rama Dasa',
+  'Gadadhara Dasa',
+  'Shadgoswami Dasa',
+  'Ishan Krishna Dasa',
+  'Others'
+]
+ },
   infoSource: { type: String, enum: ['Whatsapp Group', 'Instagram', 'Facebook', 'Friends Reference', 'Other'] },
   serviceAvailability: [
     {
