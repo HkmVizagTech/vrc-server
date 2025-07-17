@@ -4,7 +4,7 @@ const Volunteer = require('../models/volunteerform');
 const multer = require('multer');
 const { v2: cloudinary } = require('cloudinary');
 
-// Configure multer for memory storage
+
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
@@ -33,7 +33,7 @@ router.post('/api/volunteers', upload.single('image'), async (req, res) => {
 
     const data = req.body;
 
-    // 🔥 Parse serviceAvailability string into an array
+  
     if (typeof data.serviceAvailability === 'string') {
       data.serviceAvailability = JSON.parse(data.serviceAvailability);
     }
