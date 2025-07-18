@@ -69,7 +69,8 @@ const newCandidate = new Candidate({
  year: formData.year, // <- converted to number
  dob: new Date(formData.dob),
  registrationDate: new Date(),
- collegeOrWorking:formData.CollegeOrWorking,
+ collegeOrWorking:formData.collegeOrWorking,
+ companyName:formData.companyName,
  whatsappNumber: normalizedNumber,
  slot:formData.slot,
  paymentStatus: "Paid",
