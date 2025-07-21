@@ -38,6 +38,9 @@ router.post('/api/volunteers', upload.single('image'), async (req, res) => {
     if (typeof data.serviceAvailability === 'string') {
       data.serviceAvailability = JSON.parse(data.serviceAvailability);
     }
+        if (typeof data.needAccommodation === 'string') {
+  data.needAccommodation = data.needAccommodation.toLowerCase() === 'true';
+}
 
     if (imageUrl) data.imageUrl = imageUrl;
 
