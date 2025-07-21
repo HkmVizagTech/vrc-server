@@ -15,103 +15,148 @@ const razorpay = new Razorpay({
 // const gupshup = require('./gupshup'); // Assuming you have a wrapper for Gupshup
 // Create Razorpay order
 router.post("/create-order", async (req, res) => {
- const { amount } = req.body;
+  const { amount, formData } = req.body;
 
+  const receipt = `receipt_${Date.now()}`;
 
- const options = {
-   amount, // in paise
-   currency: "INR",
-   receipt: `receipt_${Date.now()}`
- };
+  const options = {
+    amount, // in paise
+    currency: "INR",
+    receipt,
+  };
 
+  try {
+    const order = await razorpay.orders.create(options);
 
- try {
-   const order = await razorpay.orders.create(options);
-   res.json(order);
- } catch (err) {
-   console.error("Error creating order:", err);
-   res.status(500).json({ status: "error", message: "Failed to create order" });
- }
+    const normalizedNumber = "91" + formData.whatsappNumber;
+
+    // Save candidate as pending
+    const candidate = new Candidate({
+      serialNo: formData.serialNo,
+      name: formData.name.trim(),
+      gender: formData.gender,
+      college: formData.college,
+      course: formData.course,
+      year: formData.year,
+      dob: new Date(formData.dob),
+      registrationDate: new Date(),
+      collegeOrWorking: formData.collegeOrWorking,
+      companyName: formData.companyName,
+      whatsappNumber: normalizedNumber,
+      slot: formData.slot,
+      paymentStatus: "Pending",
+      orderId: order.id,
+      paymentAmount: parseFloat(amount) / 100, // convert paise to rupees
+      receipt: receipt,
+      email: formData.email,
+    });
+
+    await candidate.save();
+
+    return res.json(order);
+  } catch (err) {
+    console.error("Error creating order and saving candidate:", err);
+    return res.status(500).json({ status: "error", message: "Failed to create order" });
+  }
 });
+
 
 
 // Verify payment and save candidate
 router.post("/verify-payment", async (req, res) => {
- const {
-   razorpay_order_id,
-   razorpay_payment_id,
-   razorpay_signature,
-   formData,
- } = req.body;
+  const {
+    razorpay_order_id,
+    razorpay_payment_id,
+    razorpay_signature,
+  } = req.body;
 
+  const hmac = crypto.createHmac("sha256", process.env.RAZORPAY_KEY_SECRET);
+  hmac.update(`${razorpay_order_id}|${razorpay_payment_id}`);
+  const generated_signature = hmac.digest("hex");
 
- // Signature Verification
- console.log(razorpay_order_id,razorpay_signature,razorpay_payment_id)
- const hmac = crypto.createHmac("sha256", process.env.RAZORPAY_KEY_SECRET);
- hmac.update(`${razorpay_order_id}|${razorpay_payment_id}`);
- const generated_signature = hmac.digest("hex");
- console.log(razorpay_signature,generated_signature)
- if (generated_signature !== razorpay_signature) {
-   return res.status(400).json({ status: "fail", message: "Payment verification failed" });
- }
+  if (generated_signature !== razorpay_signature) {
+    return res.status(400).json({ status: "fail", message: "Payment verification failed" });
+  }
 
+  try {
+    // Find the candidate based on the order ID
+    const candidate = await Candidate.findOne({ orderId: razorpay_order_id });
 
- try {
-   const normalizedNumber = "91" + formData.whatsappNumber;
+    if (!candidate) {
+      return res.status(404).json({ status: "fail", message: "Candidate not found" });
+    }
 
+    // If already paid, skip updating
+    if (candidate.paymentStatus === "Paid") {
+      return res.json({ message: "Already Registered", candidate });
+    }
 
-const newCandidate = new Candidate({
- serialNo: formData.serialNo,
- name: formData.name.trim(),
- gender: formData.gender,
- college: formData.college,
- course: formData.course,
- year: formData.year, // <- converted to number
- dob: new Date(formData.dob),
- registrationDate: new Date(),
- collegeOrWorking:formData.collegeOrWorking,
- companyName:formData.companyName,
- whatsappNumber: normalizedNumber,
- slot:formData.slot,
- paymentStatus: "Paid",
- paymentId: razorpay_payment_id,
- orderId: razorpay_order_id,
- paymentAmount: parseFloat(formData.amount),
- paymentDate: new Date(),
- paymentMethod: formData.paymentMethod || "Online",
- receipt: formData.receipt || `receipt_${Date.now()}`
-});
+    candidate.paymentId = razorpay_payment_id;
+    candidate.paymentDate = new Date();
+    candidate.paymentStatus = "Paid";
+    candidate.paymentMethod = "Online";
 
+    await candidate.save();
 
-
-
-   await newCandidate.save();
-   console.log(newCandidate);
-
+    // Send WhatsApp message
+    const normalizedNumber = candidate.whatsappNumber;
 
     const message = await gupshup.sendingTextTemplate(
-     {
-       template: {
-         id: '8d7d1fff-0543-4a4f-bc33-886bb0aa1fef',
-         params: [newCandidate.name],
-       },
-       'src.name': 'Production',
-       destination: normalizedNumber,
-       source: '917075176108',
-     },
-     {
-       apikey: 'zbut4tsg1ouor2jks4umy1d92salxm38',
-     }
-   );
-   console.log(message.data);
-  return res.json({message:"success"})
+      {
+        template: {
+          id: '8d7d1fff-0543-4a4f-bc33-886bb0aa1fef',
+          params: [candidate.name],
+        },
+        'src.name': 'Production',
+        destination: normalizedNumber,
+        source: '917075176108',
+      },
+      {
+        apikey: 'zbut4tsg1ouor2jks4umy1d92salxm38',
+      }
+    );
 
+    console.log("WhatsApp message sent:", message.data);
 
- } catch (err) {
-   console.error("Error saving candidate:", err);
-   return res.status(500).json({ status: "error", message: "Registration failed" });
- }
+    return res.json({ message: "success", candidate });
+
+  } catch (err) {
+    console.error("Error verifying payment:", err);
+    return res.status(500).json({ status: "error", message: "Registration failed" });
+  }
 });
+router.put("/update-payment/:id", async (req, res) => {
+  const { id } = req.params;
+  const { paymentStatus } = req.body;
+
+  try {
+    const updated = await Candidate.findByIdAndUpdate(
+      id,
+      { paymentStatus },
+      { new: true }
+    );
+
+    if (!updated) {
+      return res.status(404).json({ message: "Candidate not found" });
+    }
+
+    res.json(updated);
+  } catch (err) {
+    console.error("Update failed:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+// router.delete("/delete-candidate/:id", async (req, res) => {
+//   try {
+//     const { id } = req.params;
+//     await Candidate.findByIdAndDelete(id);
+//     res.json({ message: "Candidate deleted successfully." });
+//   } catch (err) {
+//     res.status(500).json({ message: "Error deleting candidate." });
+//   }
+// });
+
+
 router.get('/data', async (req, res) => {
  try {
    const data = await Candidate.find();
