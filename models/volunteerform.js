@@ -41,7 +41,7 @@ const volunteerSchema = new mongoose.Schema({
     }
   ],
   tshirtSize: { type: String, enum: ['XL', 'L', 'M', 'S', ''] },
-  needAccommodation: { type: String, enum: ['Yes', 'No'] },
+  needAccommodation: { type: String, enum: ['Yes', 'No'] , default: 'No' },
   imageUrl: { type: String }, 
   assignedService: { type: mongoose.Schema.Types.ObjectId, ref: 'servicecoordinator', default: null },
 }, { timestamps: true });
