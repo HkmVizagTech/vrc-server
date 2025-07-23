@@ -146,15 +146,15 @@ router.put("/update-payment/:id", async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
-// router.delete("/delete-candidate/:id", async (req, res) => {
-//   try {
-//     const { id } = req.params;
-//     await Candidate.findByIdAndDelete(id);
-//     res.json({ message: "Candidate deleted successfully." });
-//   } catch (err) {
-//     res.status(500).json({ message: "Error deleting candidate." });
-//   }
-// });
+router.delete("/delete-candidate/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    await Candidate.findByIdAndDelete(id);
+    res.json({ message: "Candidate deleted successfully." });
+  } catch (err) {
+    res.status(500).json({ message: "Error deleting candidate." });
+  }
+});
 
 
 router.get('/data', async (req, res) => {
