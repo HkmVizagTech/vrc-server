@@ -24,6 +24,7 @@ const ManualAttendance=require('./models/manual')
 const ExcelJS = require('exceljs');
 const Register = require('./routes/register');
 const Response =require('./models/flcUserdata')
+const  userRouter = require('./routes/userRoutes');
 // const ExcelJS = require('exceljs');
 // const fs = require('fs');
 // const path = require('path');
@@ -46,6 +47,7 @@ app.use('/college',require('./routes/college'))
 app.use('/july',require('./routes/julyattendence'))
 app.use("/volunteerform", require("./routes/volunteerform"));
 app.use("/servicecoordinator", require("./routes/ServiceCoordinatro"));
+app.use("/user", userRouter)
 // const sendReminder = async (event, type) => {
 //   console.log(`🔔 Sending ${type} reminder for: ${event.venue} at ${event.cronDate}`);
 //   const users= await Volunteer.find({});
@@ -1967,7 +1969,8 @@ app.get('/flcattendence1', async (req, res) => {
   }
 })
 const Candidate= require('./models/candidate');
-const dayjs=require('dayjs')
+const dayjs=require('dayjs');
+
 const EVENT_DATE = dayjs("2025-08-15T09:00:00");
 // const EVENT_DATE = dayjs("2025-08-15T09:00:00");
 
