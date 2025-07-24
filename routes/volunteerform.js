@@ -12,7 +12,7 @@ const SHEET_NAME = 'Sheet1';
 
 
 const auth = new google.auth.GoogleAuth({
-  keyFile: path.join(__dirname, '../volunteer-service-account.json'),
+  keyFile: path.join(__dirname, '../keys/volunteer-service-account.json'),
   scopes: ['https://www.googleapis.com/auth/spreadsheets'],
 });
 const sheets = google.sheets({ version: 'v4', auth });
