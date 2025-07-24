@@ -20,16 +20,24 @@ router.post('/api/volunteers', upload.single('image'), async (req, res) => {
   try {
     let imageUrl = '';
     if (req.file) {
-      imageUrl = await new Promise((resolve, reject) => {
-        const stream = cloudinary.uploader.upload_stream(
-          { folder: 'volunteers' },
-          (error, result) => {
-            if (error) return reject(error);
-            resolve(result.secure_url);
-          }
-        );
-        stream.end(req.file.buffer);
-      });
+      try {
+        imageUrl = await new Promise((resolve, reject) => {
+          const stream = cloudinary.uploader.upload_stream(
+            { folder: 'volunteers' },
+            (error, result) => {
+              if (error) {
+                console.error('Cloudinary upload error:', error);
+                return reject(error);
+              }
+              resolve(result.secure_url);
+            }
+          );
+          stream.end(req.file.buffer);
+        });
+      } catch (err) {
+        console.error('Error during Cloudinary upload:', err);
+        return res.status(500).json({ message: 'Cloudinary upload failed', error: err.message });
+      }
     }
 
     const data = req.body;
@@ -43,27 +51,27 @@ router.post('/api/volunteers', upload.single('image'), async (req, res) => {
 
     const volunteer = new Volunteer(data);
     await volunteer.save();
-    const fullNumber=`91${volunteer.whatsappNumber}`;
-        const message1= await gupshup.sendingTextTemplate(
-        {
-          template: {
-            id: '0c9f56f3-2e3d-4786-bfcd-3e1ffc441567',
-            params: [
-              volunteer.name,
-             "Volunteer",
-            //   location // fallback if message is empty
-            ],
-          },
-          'src.name': 'Production',
-          destination: fullNumber,
-          source: '917075176108',
-        },
-        {
-          apikey: 'zbut4tsg1ouor2jks4umy1d92salxm38',
-        }
-      );
-    // console.log(message.data);
-    console.log(message1.data)
+    // const fullNumber=`91${volunteer.whatsappNumber}`;
+    //     const message1= await gupshup.sendingTextTemplate(
+    //     {
+    //       template: {
+    //         id: '0c9f56f3-2e3d-4786-bfcd-3e1ffc441567',
+    //         params: [
+    //           volunteer.name,
+    //          "Volunteer",
+    //         //   location // fallback if message is empty
+    //         ],
+    //       },
+    //       'src.name': 'Production',
+    //       destination: fullNumber,
+    //       source: '917075176108',
+    //     },
+    //     {
+    //       apikey: 'zbut4tsg1ouor2jks4umy1d92salxm38',
+    //     }
+    //   );
+    // // console.log(message.data);
+    // console.log(message1.data)
 
     res.status(201).json({ message: 'Volunteer registered successfully', volunteer });
   } catch (error) {
@@ -101,16 +109,19 @@ router.get('/api/volunteers/:whatsappNumber', async (req, res) => {
 });
 
 
-router.delete('/api/volunteers', async (req, res) => {
+router.delete('/api/volunteers/:id', async (req, res) => {
+  console.log(req.params.id)
   try {
-    const result = await Volunteer.deleteMany({});
-    res.status(200).json({ message: 'All volunteer records deleted', deletedCount: result.deletedCount });
+    const result = await Volunteer.findByIdAndDelete(req.params.id);
+    if (!result) {
+      return res.status(404).json({ message: 'Volunteer not found' });
+    }
+    res.status(200).json({ message: 'Volunteer deleted successfully' });
   } catch (error) {
-    console.error('Error deleting volunteers:', error);
+    console.error('Error deleting volunteer:', error);
     res.status(500).json({ message: 'Internal server error' });
   }
 });
-
 
 
 router.patch('/api/volunteers/:id', async (req, res) => {
