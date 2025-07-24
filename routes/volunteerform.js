@@ -3,18 +3,32 @@ const router = express.Router();
 const Volunteer = require('../models/volunteerform');
 const multer = require('multer');
 const { v2: cloudinary } = require('cloudinary');
-const gupshup=require('@api/gupshup');
+const gupshup = require('@api/gupshup');
+const path = require('path');
 
+const { google } = require('googleapis');
+const SHEET_ID = '1vqIritMiZSiothAUpra88t8KYuv8SAJq7xEtDyTb7lo'; 
+const SHEET_NAME = 'Sheet1'; 
+
+
+const auth = new google.auth.GoogleAuth({
+  keyFile: path.join(__dirname, '../volunteer-service-account.json'),
+  scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+});
+const sheets = google.sheets({ version: 'v4', auth });
+// ----------------------------------------
 
 const storage = multer.memoryStorage();
-const upload = multer({ storage });
-
-cloudinary.config({ 
-  cloud_name: 'ddmzeqpkc', 
-  api_key: '467773421832135', 
-  api_secret: 'Iaa3QHrnAlB3O1vSBjShTbd4zuE' 
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 } 
 });
 
+cloudinary.config({
+  cloud_name: 'ddmzeqpkc',
+  api_key: '467773421832135',
+  api_secret: 'Iaa3QHrnAlB3O1vSBjShTbd4zuE'
+});
 
 router.post('/api/volunteers', upload.single('image'), async (req, res) => {
   try {
@@ -42,38 +56,38 @@ router.post('/api/volunteers', upload.single('image'), async (req, res) => {
 
     const data = req.body;
 
-  
     if (typeof data.serviceAvailability === 'string') {
       data.serviceAvailability = JSON.parse(data.serviceAvailability);
     }
-        if (typeof data.needAccommodation === 'string') {
-  data.needAccommodation = data.needAccommodation.toLowerCase() === 'true';
-}
+    if (typeof data.needAccommodation === 'string') {
+      data.needAccommodation = data.needAccommodation.toLowerCase() === 'true';
+    }
 
     if (imageUrl) data.imageUrl = imageUrl;
 
     const volunteer = new Volunteer(data);
     await volunteer.save();
-    // const fullNumber=`91${volunteer.whatsappNumber}`;
-    //     const message1= await gupshup.sendingTextTemplate(
-    //     {
-    //       template: {
-    //         id: '0c9f56f3-2e3d-4786-bfcd-3e1ffc441567',
-    //         params: [
-    //           volunteer.name,
-    //          "Volunteer",
-    //         //   location // fallback if message is empty
-    //         ],
-    //       },
-    //       'src.name': 'Production',
-    //       destination: fullNumber,
-    //       source: '917075176108',
+
+    // Uncomment and use Gupshup if needed
+    // const fullNumber = `91${volunteer.whatsappNumber}`;
+    // const message1 = await gupshup.sendingTextTemplate(
+    //   {
+    //     template: {
+    //       id: '0c9f56f3-2e3d-4786-bfcd-3e1ffc441567',
+    //       params: [
+    //         volunteer.name,
+    //         "Volunteer",
+    //         // location
+    //       ],
     //     },
-    //     {
-    //       apikey: 'zbut4tsg1ouor2jks4umy1d92salxm38',
-    //     }
-    //   );
-    // // console.log(message.data);
+    //     'src.name': 'Production',
+    //     destination: fullNumber,
+    //     source: '917075176108',
+    //   },
+    //   {
+    //     apikey: 'zbut4tsg1ouor2jks4umy1d92salxm38',
+    //   }
+    // );
     // console.log(message1.data)
 
     res.status(201).json({ message: 'Volunteer registered successfully', volunteer });
@@ -82,7 +96,6 @@ router.post('/api/volunteers', upload.single('image'), async (req, res) => {
     res.status(400).json({ message: 'Error registering volunteer', error: error.message });
   }
 });
-
 
 router.get('/api/volunteers', async (req, res) => {
   try {
@@ -93,7 +106,6 @@ router.get('/api/volunteers', async (req, res) => {
     res.status(500).json({ message: 'Internal server error' });
   }
 });
-
 
 router.get('/api/volunteers/:whatsappNumber', async (req, res) => {
   const { whatsappNumber } = req.params;
@@ -111,9 +123,7 @@ router.get('/api/volunteers/:whatsappNumber', async (req, res) => {
   }
 });
 
-
 router.delete('/api/volunteers/:id', async (req, res) => {
-
   try {
     const result = await Volunteer.findByIdAndDelete(req.params.id);
     if (!result) {
@@ -126,13 +136,11 @@ router.delete('/api/volunteers/:id', async (req, res) => {
   }
 });
 
-
 router.patch('/api/volunteers/:id', async (req, res) => {
   try {
     const { id } = req.params;
-   
     const updateData = req.body;
-   
+
     if (typeof updateData.serviceAvailability === 'string') {
       updateData.serviceAvailability = JSON.parse(updateData.serviceAvailability);
     }
@@ -147,5 +155,61 @@ router.patch('/api/volunteers/:id', async (req, res) => {
   }
 });
 
+
+router.post('/api/export-volunteers', async (req, res) => {
+  const volunteers = req.body.volunteers;
+  if (!Array.isArray(volunteers)) return res.status(400).send({ message: "Invalid data" });
+
+  try {
+
+    const sheetData = await sheets.spreadsheets.values.get({
+      spreadsheetId: SHEET_ID,
+      range: `${SHEET_NAME}!A2:Z`, 
+    });
+
+    const existingIDs = sheetData.data.values ? sheetData.data.values.map(row => row[0]) : [];
+
+   
+    const newVolunteers = volunteers.filter(v => !existingIDs.includes(v._id));
+
+  
+    if (newVolunteers.length === 0) {
+      return res.json({ message: "No new volunteers to export." });
+    }
+
+    const rows = newVolunteers.map(v => [
+      v._id,
+      v.name,
+      v.whatsappNumber,
+      v.gender,
+      v.age,
+      v.dateOfBirth,
+      v.maritalStatus,
+      v.profession,
+      v.collegeOrCompany,
+      v.locality,
+      v.referredBy,
+      v.infoSource,
+      v.needAccommodation ? "Yes" : "No",
+      (v.serviceAvailability || []).map(slot => `${slot.date} - ${slot.timeSlot}`).join(', '),
+      v.assignedService || "",
+      v.imageUrl || "",
+      v.createdAt || "",
+    ]);
+
+    await sheets.spreadsheets.values.append({
+      spreadsheetId: SHEET_ID,
+      range: `${SHEET_NAME}!A1`,
+      valueInputOption: 'RAW',
+      insertDataOption: 'INSERT_ROWS',
+      requestBody: { values: rows }
+    });
+
+    res.json({ message: `Exported ${newVolunteers.length} new volunteers!` });
+  } catch (err) {
+    console.error('Google Sheets export failed:', err);
+    res.status(500).send({ message: "Google Sheets export failed.", error: err.message });
+  }
+});
 
 module.exports = router;
