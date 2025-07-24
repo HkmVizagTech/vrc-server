@@ -16,7 +16,7 @@ const auth = new google.auth.GoogleAuth({
   scopes: ['https://www.googleapis.com/auth/spreadsheets'],
 });
 const sheets = google.sheets({ version: 'v4', auth });
-// ----------------------------------------
+
 
 const storage = multer.memoryStorage();
 const upload = multer({
@@ -88,7 +88,7 @@ router.post('/api/volunteers', upload.single('image'), async (req, res) => {
     //     apikey: 'zbut4tsg1ouor2jks4umy1d92salxm38',
     //   }
     // );
-    // console.log(message1.data)
+
 
     res.status(201).json({ message: 'Volunteer registered successfully', volunteer });
   } catch (error) {
