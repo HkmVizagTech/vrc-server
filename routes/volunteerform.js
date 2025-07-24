@@ -113,7 +113,7 @@ router.get('/api/volunteers/:whatsappNumber', async (req, res) => {
 
 
 router.delete('/api/volunteers/:id', async (req, res) => {
-  console.log(req.params.id)
+
   try {
     const result = await Volunteer.findByIdAndDelete(req.params.id);
     if (!result) {
