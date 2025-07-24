@@ -208,7 +208,7 @@ router.post('/api/export-volunteers', async (req, res) => {
     res.json({ message: `Exported ${newVolunteers.length} new volunteers!` });
   } catch (err) {
     console.error('Google Sheets export failed:', err);
-    res.status(500).send({ message: "Google Sheets export failed.", error: err.message });
+    res.status(500).send({ message: "Google Sheets export failed...", error: err.message });
   }
 });
 
