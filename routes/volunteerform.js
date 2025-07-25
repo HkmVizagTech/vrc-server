@@ -208,7 +208,7 @@ router.post('/api/export-volunteers', async (req, res) => {
     await sheets.spreadsheets.values.append({
       spreadsheetId: SHEET_ID,
       range: `${SHEET_NAME}!A1`,
-      valueInputOption: 'RAW',
+      valueInputOption: 'USER_ENTERED', 
       insertDataOption: 'INSERT_ROWS',
       requestBody: { values: rows }
     });
