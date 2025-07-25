@@ -200,7 +200,7 @@ router.post('/api/export-volunteers', async (req, res) => {
         v.needAccommodation ? "Yes" : "No",
         ...DATES.map(date => availability[date] || ""),
         v.assignedService || "",
-        v.imageUrl || "",
+        v.imageUrl ? `=IMAGE("${v.imageUrl}")` : "",
         v.createdAt || "",
       ];
     });
