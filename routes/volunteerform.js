@@ -160,42 +160,50 @@ router.post('/api/export-volunteers', async (req, res) => {
   const volunteers = req.body.volunteers;
   if (!Array.isArray(volunteers)) return res.status(400).send({ message: "Invalid data" });
 
-  try {
+  
+  const DATES = ["August 14", "August 15", "August 16", "August 17"];
 
+  try {
+    
     const sheetData = await sheets.spreadsheets.values.get({
       spreadsheetId: SHEET_ID,
       range: `${SHEET_NAME}!A2:Z`, 
     });
 
     const existingIDs = sheetData.data.values ? sheetData.data.values.map(row => row[0]) : [];
-
-   
     const newVolunteers = volunteers.filter(v => !existingIDs.includes(v._id));
 
-  
     if (newVolunteers.length === 0) {
       return res.json({ message: "No new volunteers to export." });
     }
 
-    const rows = newVolunteers.map(v => [
-      v._id,
-      v.name,
-      v.whatsappNumber,
-      v.gender,
-      v.age,
-      v.dateOfBirth,
-      v.maritalStatus,
-      v.profession,
-      v.collegeOrCompany,
-      v.locality,
-      v.referredBy,
-      v.infoSource,
-      v.needAccommodation ? "Yes" : "No",
-      (v.serviceAvailability || []).map(slot => `${slot.date} - ${slot.timeSlot}`).join(', '),
-      v.assignedService || "",
-      v.imageUrl || "",
-      v.createdAt || "",
-    ]);
+    const rows = newVolunteers.map(v => {
+      
+      const availability = {};
+      (v.serviceAvailability || []).forEach(slot => {
+        availability[slot.date] = slot.timeSlot;
+      });
+
+      return [
+        v._id,
+        v.name,
+        v.whatsappNumber,
+        v.gender,
+        v.age,
+        v.dateOfBirth,
+        v.maritalStatus,
+        v.profession,
+        v.collegeOrCompany,
+        v.locality,
+        v.referredBy,
+        v.infoSource,
+        v.needAccommodation ? "Yes" : "No",
+        ...DATES.map(date => availability[date] || ""),
+        v.assignedService || "",
+        v.imageUrl || "",
+        v.createdAt || "",
+      ];
+    });
 
     await sheets.spreadsheets.values.append({
       spreadsheetId: SHEET_ID,
