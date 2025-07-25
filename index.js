@@ -270,7 +270,7 @@ app.get('/',async(req,res)=>{
     return res.json(users)
 })
 const PORT = process.env.PORT || 3300;
-app.listen(PORT,()=>{
+app.listen(PORT,'0.0.0.0',()=>{
     console.log("siva",PORT);
 })
 // PATCH /:id
