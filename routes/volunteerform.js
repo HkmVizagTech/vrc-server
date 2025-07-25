@@ -10,13 +10,11 @@ const { google } = require('googleapis');
 const SHEET_ID = '1vqIritMiZSiothAUpra88t8KYuv8SAJq7xEtDyTb7lo'; 
 const SHEET_NAME = 'Sheet1'; 
 
-
 const auth = new google.auth.GoogleAuth({
   keyFile: '/keys/volunteer-service-account.json',
   scopes: ['https://www.googleapis.com/auth/spreadsheets'],
 });
 const sheets = google.sheets({ version: 'v4', auth });
-
 
 const storage = multer.memoryStorage();
 const upload = multer({
@@ -29,6 +27,63 @@ cloudinary.config({
   api_key: '467773421832135',
   api_secret: 'Iaa3QHrnAlB3O1vSBjShTbd4zuE'
 });
+
+const DATES = ["August 14", "August 15", "August 16", "August 17"];
+
+
+async function exportVolunteerToSheet(volunteer) {
+  try {
+   
+    const sheetData = await sheets.spreadsheets.values.get({
+      spreadsheetId: SHEET_ID,
+      range: `${SHEET_NAME}!A2:Z`, 
+    });
+
+    const existingIDs = sheetData.data.values ? sheetData.data.values.map(row => row[0]) : [];
+    if (existingIDs.includes(volunteer._id.toString())) {
+     
+      return false;
+    }
+
+    const availability = {};
+    (volunteer.serviceAvailability || []).forEach(slot => {
+      availability[slot.date] = slot.timeSlot;
+    });
+
+    const row = [
+      volunteer._id,
+      volunteer.name,
+      volunteer.whatsappNumber,
+      volunteer.gender,
+      volunteer.age,
+      volunteer.dateOfBirth,
+      volunteer.maritalStatus,
+      volunteer.profession,
+      volunteer.collegeOrCompany,
+      volunteer.locality,
+      volunteer.referredBy,
+      volunteer.infoSource,
+      volunteer.needAccommodation ? "Yes" : "No",
+      ...DATES.map(date => availability[date] || ""),
+      volunteer.assignedService || "",
+      volunteer.imageUrl ? `=IMAGE("${volunteer.imageUrl}")` : "",
+      volunteer.createdAt || "",
+    ];
+
+    await sheets.spreadsheets.values.append({
+      spreadsheetId: SHEET_ID,
+      range: `${SHEET_NAME}!A1`,
+      valueInputOption: 'USER_ENTERED',
+      insertDataOption: 'INSERT_ROWS',
+      requestBody: { values: [row] }
+    });
+
+    return true;
+  } catch (err) {
+    console.error('Google Sheets export failed:', err);
+    throw err;
+  }
+}
 
 router.post('/api/volunteers', upload.single('image'), async (req, res) => {
   try {
@@ -68,29 +123,39 @@ router.post('/api/volunteers', upload.single('image'), async (req, res) => {
     const volunteer = new Volunteer(data);
     await volunteer.save();
 
-    // Uncomment and use Gupshup if needed
-     const fullNumber = `91${volunteer.whatsappNumber}`;
+  
+    try {
+      await exportVolunteerToSheet(volunteer);
+    } catch (err) {
+      
+      console.error('Google Sheets export failed after registration:', err);
+    }
 
-
-    const message1 = await gupshup.sendingTextTemplate(
-      {
-        template: {
-          id: '0c9f56f3-2e3d-4786-bfcd-3e1ffc441567',
-          params: [
-            volunteer.name,
-            "Volunteer",
-            // location
-          ],
+   
+    const fullNumber = `91${volunteer.whatsappNumber}`;
+    try {
+      await gupshup.sendingTextTemplate(
+        {
+          template: {
+            id: '0c9f56f3-2e3d-4786-bfcd-3e1ffc441567',
+            params: [
+              volunteer.name,
+              "Volunteer",
+              // location
+            ],
+          },
+          'src.name': 'Production',
+          destination: fullNumber,
+          source: '917075176108',
         },
-        'src.name': 'Production',
-        destination: fullNumber,
-        source: '917075176108',
-      },
-      {
-        apikey: 'zbut4tsg1ouor2jks4umy1d92salxm38',
-      }
-    );
+        {
+          apikey: 'zbut4tsg1ouor2jks4umy1d92salxm38',
+        }
+      );
+    } catch (err) {
+      console.error('Error sending Gupshup message:', err);
 
+    }
 
     res.status(201).json({ message: 'Volunteer registered successfully', volunteer });
   } catch (error) {
@@ -162,11 +227,8 @@ router.post('/api/export-volunteers', async (req, res) => {
   const volunteers = req.body.volunteers;
   if (!Array.isArray(volunteers)) return res.status(400).send({ message: "Invalid data" });
 
-  
-  const DATES = ["August 14", "August 15", "August 16", "August 17"];
-
   try {
-    
+   
     const sheetData = await sheets.spreadsheets.values.get({
       spreadsheetId: SHEET_ID,
       range: `${SHEET_NAME}!A2:Z`, 
@@ -180,7 +242,6 @@ router.post('/api/export-volunteers', async (req, res) => {
     }
 
     const rows = newVolunteers.map(v => {
-      
       const availability = {};
       (v.serviceAvailability || []).forEach(slot => {
         availability[slot.date] = slot.timeSlot;
