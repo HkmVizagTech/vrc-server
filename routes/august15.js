@@ -52,7 +52,7 @@ router.post("/create-order", async (req, res) => {
     });
 
     await candidate.save();
-
+   // console.log(candidate);
     return res.json(order);
   } catch (err) {
     console.error("Error creating order and saving candidate:", err);
