@@ -133,13 +133,28 @@ router.put("/update-payment/:id", async (req, res) => {
     const updated = await Candidate.findByIdAndUpdate(
       id,
       { paymentStatus },
-      { new: true }
+      { new: true , projection: "name whatsappNumber paymentStatus"}
     );
-
+    console.log("Updated candidate:", updated);
     if (!updated) {
       return res.status(404).json({ message: "Candidate not found" });
     }
+      const message = await gupshup.sendingTextTemplate(
+      {
+        template: {
+          id: '8d7d1fff-0543-4a4f-bc33-886bb0aa1fef',
+          params: [updated.name],
+        },
+        'src.name': 'Production',
+        destination: updated.whatsappNumber,
+        source: '917075176108',
+      },
+      {
+        apikey: 'zbut4tsg1ouor2jks4umy1d92salxm38',
+      }
+    );
 
+    console.log("WhatsApp message sent:", message.data);
     res.json(updated);
   } catch (err) {
     console.error("Update failed:", err);
