@@ -70,24 +70,26 @@ router.post('/api/volunteers', upload.single('image'), async (req, res) => {
 
     // Uncomment and use Gupshup if needed
     // const fullNumber = `91${volunteer.whatsappNumber}`;
-    // const message1 = await gupshup.sendingTextTemplate(
-    //   {
-    //     template: {
-    //       id: '0c9f56f3-2e3d-4786-bfcd-3e1ffc441567',
-    //       params: [
-    //         volunteer.name,
-    //         "Volunteer",
-    //         // location
-    //       ],
-    //     },
-    //     'src.name': 'Production',
-    //     destination: fullNumber,
-    //     source: '917075176108',
-    //   },
-    //   {
-    //     apikey: 'zbut4tsg1ouor2jks4umy1d92salxm38',
-    //   }
-    // );
+
+    
+    const message1 = await gupshup.sendingTextTemplate(
+      {
+        template: {
+          id: '0c9f56f3-2e3d-4786-bfcd-3e1ffc441567',
+          params: [
+            volunteer.name,
+            "Volunteer",
+            // location
+          ],
+        },
+        'src.name': 'Production',
+        destination: fullNumber,
+        source: '917075176108',
+      },
+      {
+        apikey: 'zbut4tsg1ouor2jks4umy1d92salxm38',
+      }
+    );
 
 
     res.status(201).json({ message: 'Volunteer registered successfully', volunteer });
