@@ -283,4 +283,43 @@ router.post('/api/export-volunteers', async (req, res) => {
   }
 });
 
+
+
+router.post('/api/attendance', async (req, res) => {
+  try {
+    const { whatsappNumber, date, serviceType } = req.body;
+    if (!whatsappNumber || !date || !serviceType) {
+      return res.status(400).json({ message: 'Missing required fields.' });
+    }
+
+    const volunteer = await Volunteer.findOne({ whatsappNumber });
+    if (!volunteer) {
+      return res.status(404).json({ message: 'Volunteer not found.' });
+    }
+
+    volunteer.attendance = volunteer.attendance || [];
+
+    const alreadyAttended = volunteer.attendance.find(
+      a => a.date === date && a.serviceType === serviceType && a.attended
+    );
+    if (alreadyAttended) {
+      return res.status(400).json({ message: 'Attendance already marked for today.' });
+    }
+
+
+    volunteer.attendance.push({
+      date,
+      serviceType,
+      attended: true
+    });
+
+    await volunteer.save();
+
+    res.json({ message: 'Attendance marked successfully.', volunteer });
+  } catch (err) {
+    res.status(500).json({ message: err.message || 'Internal server error.' });
+  }
+});
+
+
 module.exports = router;

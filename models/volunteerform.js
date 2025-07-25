@@ -1,5 +1,13 @@
 const mongoose = require('mongoose');
 
+
+
+const attendanceSchema = new mongoose.Schema({
+  date: { type: String, required: true }, 
+  serviceType: { type: String },        
+  attended: { type: Boolean, default: false }
+}, { _id: false })
+
 const volunteerSchema = new mongoose.Schema({
   name: { type: String, required: true },
   whatsappNumber: { type: String, required: true },
@@ -43,6 +51,7 @@ const volunteerSchema = new mongoose.Schema({
   needAccommodation: { type: Boolean, default: false },
   imageUrl: { type: String }, 
   assignedService: { type: mongoose.Schema.Types.ObjectId, ref: 'servicecoordinator', default: null },
+  attendance: [attendanceSchema]
 }, { timestamps: true });
 
 module.exports = mongoose.model('volunteer', volunteerSchema);
