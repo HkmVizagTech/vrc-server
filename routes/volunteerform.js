@@ -69,9 +69,9 @@ router.post('/api/volunteers', upload.single('image'), async (req, res) => {
     await volunteer.save();
 
     // Uncomment and use Gupshup if needed
-    // const fullNumber = `91${volunteer.whatsappNumber}`;
+     const fullNumber = `91${volunteer.whatsappNumber}`;
 
-    
+
     const message1 = await gupshup.sendingTextTemplate(
       {
         template: {
