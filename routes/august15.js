@@ -139,7 +139,8 @@ router.put("/update-payment/:id", async (req, res) => {
     if (!updated) {
       return res.status(404).json({ message: "Candidate not found" });
     }
-      const message = await gupshup.sendingTextTemplate(
+  if (paymentStatus === 'Paid') {
+    const message = await gupshup.sendingTextTemplate(
       {
         template: {
           id: '8d7d1fff-0543-4a4f-bc33-886bb0aa1fef',
@@ -155,6 +156,7 @@ router.put("/update-payment/:id", async (req, res) => {
     );
 
     console.log("WhatsApp message sent:", message.data);
+  }
     res.json(updated);
   } catch (err) {
     console.error("Update failed:", err);
