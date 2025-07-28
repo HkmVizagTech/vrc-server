@@ -50,33 +50,25 @@ const HEADERS = [
   "Created At"
 ];
 
-async function ensureSheetHeaders() {
- 
-  const headerRes = await sheets.spreadsheets.values.get({
-    spreadsheetId: SHEET_ID,
-    range: `${SHEET_NAME}!A1:Z1`
-  });
-  const headerRow = headerRes.data.values ? headerRes.data.values[0] : [];
-  if (!headerRow || headerRow.length === 0) {
 
-    await sheets.spreadsheets.values.update({
-      spreadsheetId: SHEET_ID,
-      range: `${SHEET_NAME}!A1`,
-      valueInputOption: 'RAW',
-      requestBody: { values: [HEADERS] }
-    });
-  }
+async function ensureSheetHeaders() {
+  await sheets.spreadsheets.values.update({
+    spreadsheetId: SHEET_ID,
+    range: `${SHEET_NAME}!A1`,
+    valueInputOption: 'RAW',
+    requestBody: { values: [HEADERS] }
+  });
 }
 
 async function exportVolunteerToSheet(volunteer) {
   try {
     await ensureSheetHeaders();
 
+    
     const sheetData = await sheets.spreadsheets.values.get({
       spreadsheetId: SHEET_ID,
-      range: `${SHEET_NAME}!A2:Z`
+      range: `${SHEET_NAME}!A2:A`
     });
-
     const existingIDs = sheetData.data.values ? sheetData.data.values.map(row => row[0]) : [];
     if (existingIDs.includes(volunteer._id.toString())) {
       return false;
@@ -275,13 +267,14 @@ router.post('/api/export-volunteers', async (req, res) => {
   if (!Array.isArray(volunteers)) return res.status(400).send({ message: "Invalid data" });
 
   try {
+
     await ensureSheetHeaders();
+
 
     const sheetData = await sheets.spreadsheets.values.get({
       spreadsheetId: SHEET_ID,
-      range: `${SHEET_NAME}!A2:Z`
+      range: `${SHEET_NAME}!A2:A`
     });
-
     const existingIDs = sheetData.data.values ? sheetData.data.values.map(row => row[0]) : [];
     const newVolunteers = volunteers.filter(v => !existingIDs.includes(v._id));
 
