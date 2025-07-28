@@ -167,24 +167,10 @@ router.post('/api/volunteers', upload.single('image'), async (req, res) => {
 
 router.get('/api/volunteers', async (req, res) => {
   try {
-    const page = parseInt(req.query.page) || 1; 
-    const limit = parseInt(req.query.limit) || 20; 
-    const skip = (page - 1) * limit;
-
-    const total = await Volunteer.countDocuments();
-    const volunteers = await Volunteer.find()
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit)
-      .populate("assignedService");
-
+    
+    const volunteers = await Volunteer.find() 
     res.status(200).json({
-      data: volunteers,
-      page,
-      limit,
-      total,
-      totalPages: Math.ceil(total / limit),
-    });
+      data: volunteers, });
   } catch (error) {
     console.error('Error fetching volunteers:', error);
     res.status(500).json({ message: 'Internal server error' });
@@ -277,6 +263,7 @@ router.post('/api/export-volunteers', async (req, res) => {
         v.locality,
         v.referredBy,
         v.infoSource,
+        v.tshirtSize,
         v.needAccommodation ? "Yes" : "No",
         ...DATES.map(date => availability[date] || ""),
         v.assignedService || "",
