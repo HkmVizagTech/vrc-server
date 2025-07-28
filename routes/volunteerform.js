@@ -168,9 +168,28 @@ router.post('/api/volunteers', upload.single('image'), async (req, res) => {
 router.get('/api/volunteers', async (req, res) => {
   try {
     
-    const volunteers = await Volunteer.find() 
+    const { name, whatsapp, slot, page = 1, pageSize = 20 } = req.query;
+    const query = {};
+
+    if (name) query.name = { $regex: name, $options: 'i' };
+    if (whatsapp) query.whatsappNumber = { $regex: whatsapp, $options: 'i' };
+    if (slot) query['serviceAvailability.date'] = slot;
+
+    const skip = (parseInt(page) - 1) * parseInt(pageSize);
+
+   
+    const totalCount = await Volunteer.countDocuments(query);
+
+   
+    const volunteers = await Volunteer.find(query)
+      .skip(skip)
+      .limit(parseInt(pageSize))
+      .sort({ createdAt: -1 });
+
     res.status(200).json({
-      data: volunteers, });
+      data: volunteers,
+      totalCount
+    });
   } catch (error) {
     console.error('Error fetching volunteers:', error);
     res.status(500).json({ message: 'Internal server error' });
