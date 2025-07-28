@@ -271,8 +271,6 @@ router.post('/api/export-volunteers', async (req, res) => {
 
   try {
     await ensureSheetHeaders();
-
-
     await sheets.spreadsheets.values.clear({
       spreadsheetId: SHEET_ID,
       range: `${SHEET_NAME}!A2:Z`,
