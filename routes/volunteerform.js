@@ -63,6 +63,7 @@ async function exportVolunteerToSheet(volunteer) {
       volunteer.locality,
       volunteer.referredBy,
       volunteer.infoSource,
+      volunteer.tshirtSize,
       volunteer.needAccommodation ? "Yes" : "No",
       ...DATES.map(date => availability[date] || ""),
       volunteer.assignedService || "",
@@ -166,8 +167,24 @@ router.post('/api/volunteers', upload.single('image'), async (req, res) => {
 
 router.get('/api/volunteers', async (req, res) => {
   try {
-    const volunteers = await Volunteer.find().sort({ createdAt: -1 });
-    res.status(200).json(volunteers);
+    const page = parseInt(req.query.page) || 1; 
+    const limit = parseInt(req.query.limit) || 20; 
+    const skip = (page - 1) * limit;
+
+    const total = await Volunteer.countDocuments();
+    const volunteers = await Volunteer.find()
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .populate("assignedService");
+
+    res.status(200).json({
+      data: volunteers,
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+    });
   } catch (error) {
     console.error('Error fetching volunteers:', error);
     res.status(500).json({ message: 'Internal server error' });
