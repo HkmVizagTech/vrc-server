@@ -196,9 +196,11 @@ router.get('/api/volunteers', async (req, res) => {
     if (whatsapp) query.whatsappNumber = { $regex: whatsapp, $options: 'i' };
     if (slot) query['serviceAvailability.date'] = slot;
 
-    let volunteers, totalCount;
 
-    if (all === 'true' || all === true || all === 1 || all === '1') {
+    const allFlag = all === true || all === 'true' || all === 1 || all === '1';
+
+    let volunteers, totalCount;
+    if (allFlag) {
       volunteers = await Volunteer.find(query).sort({ createdAt: -1 });
       totalCount = volunteers.length;
     } else {
@@ -210,6 +212,9 @@ router.get('/api/volunteers', async (req, res) => {
         .sort({ createdAt: -1 });
     }
 
+  
+    console.log("Returned volunteers:", volunteers.length, "all param:", all, typeof all);
+
     res.status(200).json({
       data: volunteers,
       totalCount
@@ -219,6 +224,7 @@ router.get('/api/volunteers', async (req, res) => {
     res.status(500).json({ message: 'Internal server error' });
   }
 });
+
 
 router.get('/api/volunteers/:whatsappNumber', async (req, res) => {
   const { whatsappNumber } = req.params;
