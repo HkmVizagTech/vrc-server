@@ -7,8 +7,8 @@ const gupshup = require('@api/gupshup');
 const path = require('path');
 
 const { google } = require('googleapis');
-const SHEET_ID = '1vqIritMiZSiothAUpra88t8KYuv8SAJq7xEtDyTb7lo'; 
-const SHEET_NAME = 'MASTER'; 
+const SHEET_ID = '1vqIritMiZSiothAUpra88t8KYuv8SAJq7xEtDyTb7lo';
+const SHEET_NAME = 'MASTER';
 
 const auth = new google.auth.GoogleAuth({
   keyFile: '/keys/volunteer-service-account.json',
@@ -19,7 +19,7 @@ const sheets = google.sheets({ version: 'v4', auth });
 const storage = multer.memoryStorage();
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 10 * 1024 * 1024 } 
+  limits: { fileSize: 10 * 1024 * 1024 }
 });
 
 cloudinary.config({
@@ -29,19 +29,56 @@ cloudinary.config({
 });
 
 const DATES = ["August 14", "August 15", "August 16", "August 17"];
+const HEADERS = [
+  "ID",
+  "Name",
+  "WhatsApp",
+  "Gender",
+  "Age",
+  "DOB",
+  "Marital Status",
+  "Profession",
+  "College/Company",
+  "Locality",
+  "Referred By",
+  "Info Source",
+  "T-Shirt Size",
+  "Accommodation",
+  ...DATES,
+  "Assigned Service",
+  "Image",
+  "Created At"
+];
 
+async function ensureSheetHeaders() {
+ 
+  const headerRes = await sheets.spreadsheets.values.get({
+    spreadsheetId: SHEET_ID,
+    range: `${SHEET_NAME}!A1:Z1`
+  });
+  const headerRow = headerRes.data.values ? headerRes.data.values[0] : [];
+  if (!headerRow || headerRow.length === 0) {
+
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: SHEET_ID,
+      range: `${SHEET_NAME}!A1`,
+      valueInputOption: 'RAW',
+      requestBody: { values: [HEADERS] }
+    });
+  }
+}
 
 async function exportVolunteerToSheet(volunteer) {
   try {
-   
+    await ensureSheetHeaders();
+
     const sheetData = await sheets.spreadsheets.values.get({
       spreadsheetId: SHEET_ID,
-      range: `${SHEET_NAME}!A2:Z`, 
+      range: `${SHEET_NAME}!A2:Z`
     });
 
     const existingIDs = sheetData.data.values ? sheetData.data.values.map(row => row[0]) : [];
     if (existingIDs.includes(volunteer._id.toString())) {
-     
       return false;
     }
 
@@ -124,15 +161,12 @@ router.post('/api/volunteers', upload.single('image'), async (req, res) => {
     const volunteer = new Volunteer(data);
     await volunteer.save();
 
-  
     try {
       await exportVolunteerToSheet(volunteer);
     } catch (err) {
-      
       console.error('Google Sheets export failed after registration:', err);
     }
 
-   
     const fullNumber = `91${volunteer.whatsappNumber}`;
     try {
       await gupshup.sendingTextTemplate(
@@ -142,7 +176,6 @@ router.post('/api/volunteers', upload.single('image'), async (req, res) => {
             params: [
               volunteer.name,
               "Volunteer",
-              // location
             ],
           },
           'src.name': 'Production',
@@ -155,7 +188,6 @@ router.post('/api/volunteers', upload.single('image'), async (req, res) => {
       );
     } catch (err) {
       console.error('Error sending Gupshup message:', err);
-
     }
 
     res.status(201).json({ message: 'Volunteer registered successfully', volunteer });
@@ -167,7 +199,6 @@ router.post('/api/volunteers', upload.single('image'), async (req, res) => {
 
 router.get('/api/volunteers', async (req, res) => {
   try {
-    
     const { name, whatsapp, slot, page = 1, pageSize = 20 } = req.query;
     const query = {};
 
@@ -176,11 +207,8 @@ router.get('/api/volunteers', async (req, res) => {
     if (slot) query['serviceAvailability.date'] = slot;
 
     const skip = (parseInt(page) - 1) * parseInt(pageSize);
-
-   
     const totalCount = await Volunteer.countDocuments(query);
 
-   
     const volunteers = await Volunteer.find(query)
       .skip(skip)
       .limit(parseInt(pageSize))
@@ -198,13 +226,11 @@ router.get('/api/volunteers', async (req, res) => {
 
 router.get('/api/volunteers/:whatsappNumber', async (req, res) => {
   const { whatsappNumber } = req.params;
-
   try {
     const volunteer = await Volunteer.findOne({ whatsappNumber });
     if (!volunteer) {
       return res.status(404).json({ message: 'Volunteer not found' });
     }
-
     res.status(200).json(volunteer);
   } catch (error) {
     console.error('Error fetching volunteer:', error);
@@ -244,16 +270,16 @@ router.patch('/api/volunteers/:id', async (req, res) => {
   }
 });
 
-
 router.post('/api/export-volunteers', async (req, res) => {
   const volunteers = req.body.volunteers;
   if (!Array.isArray(volunteers)) return res.status(400).send({ message: "Invalid data" });
 
   try {
-   
+    await ensureSheetHeaders();
+
     const sheetData = await sheets.spreadsheets.values.get({
       spreadsheetId: SHEET_ID,
-      range: `${SHEET_NAME}!A2:Z`, 
+      range: `${SHEET_NAME}!A2:Z`
     });
 
     const existingIDs = sheetData.data.values ? sheetData.data.values.map(row => row[0]) : [];
@@ -294,7 +320,7 @@ router.post('/api/export-volunteers', async (req, res) => {
     await sheets.spreadsheets.values.append({
       spreadsheetId: SHEET_ID,
       range: `${SHEET_NAME}!A1`,
-      valueInputOption: 'USER_ENTERED', 
+      valueInputOption: 'USER_ENTERED',
       insertDataOption: 'INSERT_ROWS',
       requestBody: { values: rows }
     });
@@ -305,8 +331,6 @@ router.post('/api/export-volunteers', async (req, res) => {
     res.status(500).send({ message: "Google Sheets export failed...", error: err.message });
   }
 });
-
-
 
 router.post('/api/attendance', async (req, res) => {
   try {
@@ -329,7 +353,6 @@ router.post('/api/attendance', async (req, res) => {
       return res.status(400).json({ message: 'Attendance already marked for today.' });
     }
 
-
     volunteer.attendance.push({
       date,
       serviceType,
@@ -343,6 +366,5 @@ router.post('/api/attendance', async (req, res) => {
     res.status(500).json({ message: err.message || 'Internal server error.' });
   }
 });
-
 
 module.exports = router;
