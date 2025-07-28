@@ -197,7 +197,8 @@ router.get('/api/volunteers', async (req, res) => {
     if (slot) query['serviceAvailability.date'] = slot;
 
     let volunteers, totalCount;
-    if (all === 'true') {
+
+    if (all === 'true' || all === true || all === 1 || all === '1') {
       volunteers = await Volunteer.find(query).sort({ createdAt: -1 });
       totalCount = volunteers.length;
     } else {
