@@ -50,7 +50,6 @@ const HEADERS = [
   "Created At"
 ];
 
-
 async function ensureSheetHeaders() {
   await sheets.spreadsheets.values.update({
     spreadsheetId: SHEET_ID,
@@ -64,7 +63,6 @@ async function exportVolunteerToSheet(volunteer) {
   try {
     await ensureSheetHeaders();
 
-    
     const sheetData = await sheets.spreadsheets.values.get({
       spreadsheetId: SHEET_ID,
       range: `${SHEET_NAME}!A2:A`
@@ -191,20 +189,25 @@ router.post('/api/volunteers', upload.single('image'), async (req, res) => {
 
 router.get('/api/volunteers', async (req, res) => {
   try {
-    const { name, whatsapp, slot, page = 1, pageSize = 20 } = req.query;
+    const { name, whatsapp, slot, page = 1, pageSize = 20, all = false } = req.query;
     const query = {};
 
     if (name) query.name = { $regex: name, $options: 'i' };
     if (whatsapp) query.whatsappNumber = { $regex: whatsapp, $options: 'i' };
     if (slot) query['serviceAvailability.date'] = slot;
 
-    const skip = (parseInt(page) - 1) * parseInt(pageSize);
-    const totalCount = await Volunteer.countDocuments(query);
-
-    const volunteers = await Volunteer.find(query)
-      .skip(skip)
-      .limit(parseInt(pageSize))
-      .sort({ createdAt: -1 });
+    let volunteers, totalCount;
+    if (all === 'true') {
+      volunteers = await Volunteer.find(query).sort({ createdAt: -1 });
+      totalCount = volunteers.length;
+    } else {
+      const skip = (parseInt(page) - 1) * parseInt(pageSize);
+      totalCount = await Volunteer.countDocuments(query);
+      volunteers = await Volunteer.find(query)
+        .skip(skip)
+        .limit(parseInt(pageSize))
+        .sort({ createdAt: -1 });
+    }
 
     res.status(200).json({
       data: volunteers,
@@ -267,22 +270,16 @@ router.post('/api/export-volunteers', async (req, res) => {
   if (!Array.isArray(volunteers)) return res.status(400).send({ message: "Invalid data" });
 
   try {
-
     await ensureSheetHeaders();
 
 
-    const sheetData = await sheets.spreadsheets.values.get({
+    await sheets.spreadsheets.values.clear({
       spreadsheetId: SHEET_ID,
-      range: `${SHEET_NAME}!A2:A`
+      range: `${SHEET_NAME}!A2:Z`,
     });
-    const existingIDs = sheetData.data.values ? sheetData.data.values.map(row => row[0]) : [];
-    const newVolunteers = volunteers.filter(v => !existingIDs.includes(v._id));
 
-    if (newVolunteers.length === 0) {
-      return res.json({ message: "No new volunteers to export." });
-    }
 
-    const rows = newVolunteers.map(v => {
+    const rows = volunteers.map(v => {
       const availability = {};
       (v.serviceAvailability || []).forEach(slot => {
         availability[slot.date] = slot.timeSlot;
@@ -318,7 +315,7 @@ router.post('/api/export-volunteers', async (req, res) => {
       requestBody: { values: rows }
     });
 
-    res.json({ message: `Exported ${newVolunteers.length} new volunteers!` });
+    res.json({ message: `Exported ${volunteers.length} volunteers!` });
   } catch (err) {
     console.error('Google Sheets export failed:', err);
     res.status(500).send({ message: "Google Sheets export failed...", error: err.message });
