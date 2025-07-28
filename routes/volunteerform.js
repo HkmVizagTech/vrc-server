@@ -8,7 +8,7 @@ const path = require('path');
 
 const { google } = require('googleapis');
 const SHEET_ID = '1vqIritMiZSiothAUpra88t8KYuv8SAJq7xEtDyTb7lo'; 
-const SHEET_NAME = 'Sheet1'; 
+const SHEET_NAME = 'MASTER'; 
 
 const auth = new google.auth.GoogleAuth({
   keyFile: '/keys/volunteer-service-account.json',
