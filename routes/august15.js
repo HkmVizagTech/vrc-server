@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const crypto = require('crypto');
+const bodyParser = require('body-parser');
 // const razorpay = require('razorpay'); // <-- Replace with your actual Razorpay instance
 const Candidate = require('../models/candidate');
 const Razorpay = require('razorpay');
@@ -125,6 +126,10 @@ router.post("/verify-payment", async (req, res) => {
     return res.status(500).json({ status: "error", message: "Registration failed" });
   }
 });
+
+
+
+
 router.put("/update-payment/:id", async (req, res) => {
   const { id } = req.params;
   const { paymentStatus } = req.body;

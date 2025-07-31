@@ -25,17 +25,15 @@ const ExcelJS = require('exceljs');
 const Register = require('./routes/register');
 const Response =require('./models/flcUserdata')
 const  userRouter = require('./routes/userRoutes');
-// const ExcelJS = require('exceljs');
-// const fs = require('fs');
-// const path = require('path');
+const webhookRouter = require('./routes/razorpayWebhook');
 const archiver = require('archiver');
-// const fs = require('fs');
-// const path = require('path');
+
 const cloudinary = require('cloudinary').v2;
-// const file=require('./')
-// const manager = require('./models/manager');
+
 db();
 app.use(cors());
+
+app.use('/api/razorpay-webhook', webhookRouter);
 
 const bodyParser = require('body-parser');
 app.use(bodyParser.json({ limit: '10mb' })); 
@@ -57,6 +55,7 @@ app.use('/july',require('./routes/julyattendence'))
 app.use("/volunteerform", require("./routes/volunteerform"));
 app.use("/servicecoordinator", require("./routes/ServiceCoordinatro"));
 app.use("/user", userRouter)
+app.use('/api',require('./routes/august15'))
 // const sendReminder = async (event, type) => {
 //   console.log(`🔔 Sending ${type} reminder for: ${event.venue} at ${event.cronDate}`);
 //   const users= await Volunteer.find({});
@@ -187,7 +186,7 @@ app.use("/user", userRouter)
 //     console.error("❌ Cron error:", err.message);
 //   }
 // });
-app.use('/api',require('./routes/august15'))
+
 app.post('/user', async (req, res) => {
   try {
     const { age, ...rest } = req.body;
