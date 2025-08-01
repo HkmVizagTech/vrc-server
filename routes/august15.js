@@ -98,6 +98,19 @@ router.post("/verify-payment", async (req, res) => {
     candidate.paymentMethod = "Online";
 
     await candidate.save();
+   // Choose template ID based on gender
+let templateId;
+
+switch (candidate.gender.trim().toLowerCase()) {
+  case 'male':
+    templateId = '2e1d19a6-5f70-4db7-9117-7c135490cc93';
+    break;
+  case 'female':
+    templateId = 'ec467dfe-34dd-40ea-9cd5-8e74644d9ccf';
+    break;
+  default:
+    templateId = '8d7d1fff-0543-4a4f-bc33-886bb0aa1fef'; // fallback or neutral message
+}
 
     // Send WhatsApp message
     const normalizedNumber = candidate.whatsappNumber;
@@ -105,7 +118,7 @@ router.post("/verify-payment", async (req, res) => {
     const message = await gupshup.sendingTextTemplate(
       {
         template: {
-          id: '8d7d1fff-0543-4a4f-bc33-886bb0aa1fef',
+          id: templateId,
           params: [candidate.name],
         },
         'src.name': 'Production',
@@ -135,39 +148,67 @@ router.put("/update-payment/:id", async (req, res) => {
   const { paymentStatus } = req.body;
 
   try {
-    const updated = await Candidate.findByIdAndUpdate(
-      id,
-      { paymentStatus },
-      { new: true , projection: "name whatsappNumber paymentStatus"}
-    );
-    console.log("Updated candidate:", updated);
-    if (!updated) {
+    // First fetch the candidate to get gender and other info
+    const candidate = await Candidate.findById(id);
+
+    if (!candidate) {
       return res.status(404).json({ message: "Candidate not found" });
     }
-  if (paymentStatus === 'Paid') {
-    const message = await gupshup.sendingTextTemplate(
-      {
-        template: {
-          id: '8d7d1fff-0543-4a4f-bc33-886bb0aa1fef',
-          params: [updated.name],
-        },
-        'src.name': 'Production',
-        destination: updated.whatsappNumber,
-        source: '917075176108',
-      },
-      {
-        apikey: 'zbut4tsg1ouor2jks4umy1d92salxm38',
-      }
-    );
 
-    console.log("WhatsApp message sent:", message.data);
-  }
-    res.json(updated);
+    // Update payment status
+    candidate.paymentStatus = paymentStatus;
+    await candidate.save();
+
+    console.log("Updated candidate:", candidate);
+
+    if (paymentStatus === 'Paid') {
+      // Choose template ID based on gender
+      let templateId;
+
+      switch (candidate.gender.trim().toLowerCase()) {
+        case 'male':
+          templateId = '2e1d19a6-5f70-4db7-9117-7c135490cc93';
+          break;
+        case 'female':
+          templateId = 'ec467dfe-34dd-40ea-9cd5-8e74644d9ccf';
+          break;
+        default:
+          templateId = '8d7d1fff-0543-4a4f-bc33-886bb0aa1fef'; // fallback
+          console.warn(`Fallback template used for gender: ${candidate.gender}`);
+          break;
+      }
+
+      // Send WhatsApp message
+      try {
+        const message = await gupshup.sendingTextTemplate(
+          {
+            template: {
+              id: templateId,
+              params: [candidate.name],
+            },
+            'src.name': 'Production',
+            destination: candidate.whatsappNumber,
+            source: '917075176108',
+          },
+          {
+            apikey: 'zbut4tsg1ouor2jks4umy1d92salxm38',
+          }
+        );
+
+        console.log("WhatsApp message sent:", message.data);
+      } catch (msgErr) {
+        console.error("Failed to send WhatsApp message:", msgErr);
+      }
+    }
+
+    res.json(candidate);
+
   } catch (err) {
     console.error("Update failed:", err);
     res.status(500).json({ message: "Server error" });
   }
 });
+
 router.delete("/delete-candidate/:id", async (req, res) => {
   try {
     const { id } = req.params;
