@@ -221,8 +221,7 @@ router.get('/api/volunteers', async (req, res) => {
     let volunteers, totalCount;
     if (allFlag) {
       volunteers = await Volunteer.find(query)
-        .sort({ createdAt: -1 })
-        .populate("assignedService");
+        .sort({ createdAt: -1 });
       totalCount = volunteers.length;
     } else {
       const skip = (parseInt(page) - 1) * parseInt(pageSize);
