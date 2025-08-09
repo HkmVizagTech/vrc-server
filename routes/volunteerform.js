@@ -1,6 +1,5 @@
 const express = require('express');
 const router = express.Router();
-// const Volunteer = require('../models/volunteerformtesting');
 const Volunteer = require('../models/volunteerformtesting')
 const multer = require('multer');
 const { v2: cloudinary } = require('cloudinary');
@@ -114,25 +113,6 @@ async function exportVolunteerToSheet(volunteer) {
   }
 }
 
-
-router.get('/api/:whatsappNumber/assigned-services', async (req, res) => {
-  const { whatsappNumber } = req.params;
-
-  try {
-    const volunteer = await Volunteer.findOne({ whatsappNumber }).populate('assignedService');
-    if (!volunteer) {
-      return res.status(404).json({ message: 'Volunteer not found' });
-    }
-    if (!volunteer.assignedService) {
-      return res.status(200).json({ message: 'No service assigned yet.' });
-    }
-    res.status(200).json({ assignedService: volunteer.assignedService });
-  } catch (error) {
-    console.error('Error fetching assigned services:', error);
-    res.status(500).json({ message: 'Internal server error' });
-  }
-});
-
 router.post('/api/volunteers', upload.single('image'), async (req, res) => {
   try {
     let imageUrl = '';
@@ -221,8 +201,7 @@ router.get('/api/volunteers', async (req, res) => {
 
     let volunteers, totalCount;
     if (allFlag) {
-      volunteers = await Volunteer.find(query)
-        .sort({ createdAt: -1 });
+      volunteers = await Volunteer.find(query).sort({ createdAt: -1 });
       totalCount = volunteers.length;
     } else {
       const skip = (parseInt(page) - 1) * parseInt(pageSize);
@@ -230,9 +209,9 @@ router.get('/api/volunteers', async (req, res) => {
       volunteers = await Volunteer.find(query)
         .skip(skip)
         .limit(parseInt(pageSize))
-        .sort({ createdAt: -1 })
-        .populate("assignedService"); 
+        .sort({ createdAt: -1 });
     }
+
   
     console.log("Returned volunteers:", volunteers.length, "all param:", all, typeof all);
 
@@ -382,9 +361,5 @@ router.post('/api/attendance', async (req, res) => {
     res.status(500).json({ message: err.message || 'Internal server error.' });
   }
 });
-
-
-
-
 
 module.exports = router;
