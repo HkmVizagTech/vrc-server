@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const Volunteer = require('../models/volunteerformtesting')
+const Volunteer = require('../models/volunteerformtesting');
+const mongoose = require('mongoose'); 
 const multer = require('multer');
 const { v2: cloudinary } = require('cloudinary');
 const gupshup = require('@api/gupshup');
@@ -223,27 +224,30 @@ router.get('/api/volunteers', async (req, res) => {
     res.status(500).json({ message: 'Internal server error' });
   }
 });
-router.get('/api/volunteers/:whatsappNumber', async (req, res) => {
-  const { whatsappNumber } = req.params;
-  try {
-    const volunteer = await Volunteer.findOne({ whatsappNumber });
-    if (!volunteer) {
-      return res.status(404).json({ message: 'Volunteer not found' });
-    }
-    res.status(200).json(volunteer);
-  } catch (error) {
-    console.error('Error fetching volunteer:', error);
-    res.status(500).json({ message: 'Internal server error' });
-  }
-});
+
 
 router.get('/api/volunteers/:whatsappNumber', async (req, res) => {
   const { whatsappNumber } = req.params;
+  
   try {
-    const volunteer = await Volunteer.findOne({ whatsappNumber });
+    console.log('Searching for:', whatsappNumber);
+    
+    const allVolunteers = await Volunteer.find({});
+  
+    const searchNumber = String(whatsappNumber).replace(/\D/g, '');
+    console.log('Cleaned search number:', searchNumber);
+
+    const volunteer = allVolunteers.find(v => {
+      const dbNumber = String(v.whatsappNumber).replace(/\D/g, '');
+      return dbNumber === searchNumber;
+    });
+    
+    console.log('Search result:', volunteer ? `FOUND: ${volunteer.name}` : 'NOT FOUND');
+    
     if (!volunteer) {
       return res.status(404).json({ message: 'Volunteer not found' });
     }
+    
     res.status(200).json(volunteer);
   } catch (error) {
     console.error('Error fetching volunteer:', error);
@@ -264,29 +268,43 @@ router.delete('/api/volunteers/:id', async (req, res) => {
   }
 });
 
+
 router.patch('/api/volunteers/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const updateData = req.body;
+    
+    console.log('=== UPDATE DEBUG ===');
+    console.log('Volunteer ID:', id);
+    console.log('Update data:', JSON.stringify(updateData, null, 2));
+    
+  
     if (typeof updateData.serviceAvailability === 'string') {
       updateData.serviceAvailability = JSON.parse(updateData.serviceAvailability);
     }
+    
+
     if (updateData.assignedService) {
-      
       if (typeof updateData.assignedService === 'string') {
-        updateData.assignedService = new mongoose.Types.ObjectId(updateData.assignedService);
+
+        if (mongoose.Types.ObjectId.isValid(updateData.assignedService)) {
+          updateData.assignedService = new mongoose.Types.ObjectId(updateData.assignedService);
+        }
       }
-  
+      
     }
+    
+  
     updateData.updatedAt = new Date();
-    //console.log('Updating volunteer with data:', JSON.stringify(updateData, null, 2));
+    
+    console.log('Processed update data:', JSON.stringify(updateData, null, 2));
 
     const updatedVolunteer = await Volunteer.findByIdAndUpdate(
       id, 
       updateData, 
       { 
         new: true,
-        runValidators: true 
+        runValidators: false 
       }
     );
 
@@ -294,7 +312,8 @@ router.patch('/api/volunteers/:id', async (req, res) => {
       return res.status(404).json({ message: 'Volunteer not found' });
     }
 
-   // console.log('Updated volunteer:', JSON.stringify(updatedVolunteer, null, 2));
+    console.log('Update successful for:', updatedVolunteer.name);
+    console.log('=== END UPDATE DEBUG ===');
 
     res.status(200).json({ 
       message: 'Volunteer updated successfully', 
@@ -309,7 +328,6 @@ router.patch('/api/volunteers/:id', async (req, res) => {
   }
 });
 
-
 router.post('/api/export-volunteers', async (req, res) => {
   const volunteers = req.body.volunteers;
   if (!Array.isArray(volunteers)) return res.status(400).send({ message: "Invalid data" });
@@ -320,7 +338,6 @@ router.post('/api/export-volunteers', async (req, res) => {
       spreadsheetId: SHEET_ID,
       range: `${SHEET_NAME}!A2:Z`,
     });
-
 
     const rows = volunteers.map(v => {
       const availability = {};
