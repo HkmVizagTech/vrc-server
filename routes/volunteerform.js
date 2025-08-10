@@ -196,12 +196,13 @@ router.get('/api/volunteers', async (req, res) => {
     if (whatsapp) query.whatsappNumber = { $regex: whatsapp, $options: 'i' };
     if (slot) query['serviceAvailability.date'] = slot;
 
-
     const allFlag = all === true || all === 'true' || all === 1 || all === '1';
 
     let volunteers, totalCount;
     if (allFlag) {
-      volunteers = await Volunteer.find(query).sort({ createdAt: -1 });
+      volunteers = await Volunteer.find(query)
+        .populate('assignedService') 
+        .sort({ createdAt: -1 });
       totalCount = volunteers.length;
     } else {
       const skip = (parseInt(page) - 1) * parseInt(pageSize);
@@ -209,11 +210,9 @@ router.get('/api/volunteers', async (req, res) => {
       volunteers = await Volunteer.find(query)
         .skip(skip)
         .limit(parseInt(pageSize))
+        .populate('assignedService') 
         .sort({ createdAt: -1 });
     }
-
-  
-    console.log("Returned volunteers:", volunteers.length, "all param:", all, typeof all);
 
     res.status(200).json({
       data: volunteers,
@@ -224,7 +223,19 @@ router.get('/api/volunteers', async (req, res) => {
     res.status(500).json({ message: 'Internal server error' });
   }
 });
-
+router.get('/api/volunteers/:whatsappNumber', async (req, res) => {
+  const { whatsappNumber } = req.params;
+  try {
+    const volunteer = await Volunteer.findOne({ whatsappNumber });
+    if (!volunteer) {
+      return res.status(404).json({ message: 'Volunteer not found' });
+    }
+    res.status(200).json(volunteer);
+  } catch (error) {
+    console.error('Error fetching volunteer:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
 
 router.get('/api/volunteers/:whatsappNumber', async (req, res) => {
   const { whatsappNumber } = req.params;
@@ -257,20 +268,47 @@ router.patch('/api/volunteers/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const updateData = req.body;
-
     if (typeof updateData.serviceAvailability === 'string') {
       updateData.serviceAvailability = JSON.parse(updateData.serviceAvailability);
     }
-    const updatedVolunteer = await Volunteer.findByIdAndUpdate(id, updateData, { new: true });
+    if (updateData.assignedService) {
+      
+      if (typeof updateData.assignedService === 'string') {
+        updateData.assignedService = new mongoose.Types.ObjectId(updateData.assignedService);
+      }
+  
+    }
+    updateData.updatedAt = new Date();
+    //console.log('Updating volunteer with data:', JSON.stringify(updateData, null, 2));
+
+    const updatedVolunteer = await Volunteer.findByIdAndUpdate(
+      id, 
+      updateData, 
+      { 
+        new: true,
+        runValidators: true 
+      }
+    );
+
     if (!updatedVolunteer) {
       return res.status(404).json({ message: 'Volunteer not found' });
     }
-    res.status(200).json({ message: 'Volunteer updated', volunteer: updatedVolunteer });
+
+   // console.log('Updated volunteer:', JSON.stringify(updatedVolunteer, null, 2));
+
+    res.status(200).json({ 
+      message: 'Volunteer updated successfully', 
+      volunteer: updatedVolunteer 
+    });
   } catch (error) {
     console.error('Error updating volunteer:', error);
-    res.status(400).json({ message: 'Error updating volunteer', error: error.message });
+    res.status(400).json({ 
+      message: 'Error updating volunteer', 
+      error: error.message 
+    });
   }
 });
+
 
 router.post('/api/export-volunteers', async (req, res) => {
   const volunteers = req.body.volunteers;

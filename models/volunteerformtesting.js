@@ -50,7 +50,10 @@ const volunteerSchemaTesting = new mongoose.Schema({
   tshirtSize: { type: String, enum: ['XL', 'L', 'M', 'S', ''] },
   needAccommodation: { type: Boolean, default: false },
   imageUrl: { type: String }, 
-  assignedService: { type: mongoose.Schema.Types.ObjectId, ref: 'servicecoordinator', default: null },
+assignedService: { 
+    type: mongoose.Schema.Types.Mixed, 
+    default: null 
+  },
   attendance: [attendanceSchema]
 }, { timestamps: true });
 
